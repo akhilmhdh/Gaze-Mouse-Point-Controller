@@ -34,7 +34,7 @@ class FaceDetectionModel:
         model_bin = os.path.splitext(self.model_path)[0]+".bin"
         self.plugin = IECore()
         # network model
-        self.network = IENetwork(model=model_xml, weights=model_bin)
+        self.network = self.plugin.read_network(model=model_xml, weights=model_bin)
 
         network_layers = self.network.layers.keys()
         supported_layers = self.plugin.query_network(network=self.network,device_name=self.device).keys()
@@ -50,6 +50,12 @@ class FaceDetectionModel:
         # cpu extension added
         if self.extensions!=None and "CPU" in self.device and ext_required:
             self.plugin.add_extension(self.extensions, self.device)
+        
+            for layer in network_layers:
+                if layer in supported_layers:
+                    pass
+                else:
+                    raise Exception("Layer extension doesn't support all layers")
         
         self.exec_network= self.plugin.load_network(self.network, self.device)
 
@@ -69,13 +75,13 @@ class FaceDetectionModel:
         input_dict = {self.input_name:input_img}
         outputs = self.exec_network.infer(input_dict)[self.output_name]
         coords = self.preprocess_outputs(outputs,threshold,(image.shape[1],image.shape[0]))
-        return self.draw_outputs(coords,image)
+        return self.crop_face(coords,image)
 
-    def draw_outputs(self, coords, image):
+    def crop_face(self, coords, image):
         # TODO: This method needs to be completed by you
-        for coord in coords:
-            cv2.rectangle(image, (coord[0],coord[1]), (coord[2], coord[3]), (0, 55, 255), 1)
-        return coords,image
+        coords = coords[0]
+        cropped_face = image[coords[1]:coords[3], coords[0]:coords[2]]
+        return coords,cropped_face
 
     def preprocess_input(self, image):
         preprocessed_frame = cv2.resize(image,(self.input_shape[3],self.input_shape[2]))

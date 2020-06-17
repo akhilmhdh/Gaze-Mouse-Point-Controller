@@ -28,7 +28,12 @@ import cv2
 import numpy as np
 import logging as log
 from argparse import ArgumentParser
+
 from inference_classes.face_detection import FaceDetectionModel
+from inference_classes.facial_landmarks_detection import FacialLandmardDetectionModel
+from inference_classes.head_pose_detection import HeadPoseDetectionModel
+from inference_classes.gaze_estimation import GazeEstimationModel
+
 from input_feeder import InputFeeder
 
 def build_argparser():
@@ -42,8 +47,8 @@ def build_argparser():
                         help="Path to a face detection xml file with a trained model.")
     # parser.add_argument("-hp_-m", "--model", required=True, type=str,
     #                     help="Path to a face detection xml file with a trained model.")
-    # parser.add_argument("-fld_m", "--model", required=True, type=str,
-    #                     help="Path to a face detection xml file with a trained model.")
+    parser.add_argument("-fld_m", "--facial_landmark_model", required=True, type=str,
+                        help="Path to a facial landmark detection xml file with a trained model.")
     # parser.add_argument("-ge_m", "--model", required=True, type=str,
     #                     help="Path to a face detection xml file with a trained model.")                    
     parser.add_argument("-i", "--input", required=True, type=str,
@@ -70,14 +75,19 @@ def infer_on_stream(args):
     # Set Probability threshold for detections
     prob_threshold = args.prob_threshold
     face_detector_path = args.face_detector_model
+    facial_landmark_path = args.facial_landmark_model
     device = args.device
     extension = args.cpu_extension
     input_type = args.type.lower()
     input_file = args.input
 
-    # model loading
+    # model classess intializing
     face_detector = FaceDetectionModel(model_name=face_detector_path,device=device,extensions=extension)
+    face_landmark_detector = FacialLandmardDetectionModel(model_name=facial_landmark_path,device=device,extensions=extension)
+    
+    # model loading
     face_detector.load_model()
+    face_landmark_detector.load_model()
 
     # visual pipeline
     input_feeder = InputFeeder(input_type,input_file)
@@ -88,8 +98,11 @@ def infer_on_stream(args):
             break
 
         key = cv2.waitKey(60)
-        coords,image=face_detector.predict(frame,prob_threshold)
-        cv2.imshow('frame',image)
+
+        face_coords,face_cropped_image=face_detector.predict(frame,prob_threshold)
+        face_landmark_coords, face_landmark_image = face_landmark_detector.predict(face_cropped_image)
+
+        cv2.imshow('frame',face_landmark_image)
     input_feeder.close()
 
 
