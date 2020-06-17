@@ -4,7 +4,7 @@ import logging as log
 from openvino.inference_engine import IENetwork, IECore
 import cv2
 
-class HeadPoseDetectionModel:
+class HeadPoseEstimationModel:
     '''
     Class for the Face Detection Model.
     '''
@@ -66,37 +66,25 @@ class HeadPoseDetectionModel:
 
         return
 
-    def predict(self, image,threshold):
+    def predict(self, image):
         '''
         TODO: You will need to complete this method.
         This method is meant for running predictions on the input image.
         '''
         input_img = self.preprocess_input(image)
         input_dict = {self.input_name:input_img}
-        outputs = self.exec_network.infer(input_dict)[self.output_name]
-        coords = self.preprocess_outputs(outputs,threshold,(image.shape[1],image.shape[0]))
-        return self.draw_outputs(coords,image)
-
-    def draw_outputs(self, coords, image):
-        # TODO: This method needs to be completed by you
-        for coord in coords:
-            cv2.rectangle(image, (coord[0],coord[1]), (coord[2], coord[3]), (0, 55, 255), 1)
-        return coords,image
+        outputs = self.exec_network.infer(input_dict)
+        angles = self.preprocess_outputs(outputs,(image.shape[1],image.shape[0]))
+        return angles
 
     def preprocess_input(self, image):
         preprocessed_frame = cv2.resize(image,(self.input_shape[3],self.input_shape[2]))
         preprocessed_frame = preprocessed_frame.transpose((2,0,1))
         return preprocessed_frame.reshape(1,*preprocessed_frame.shape)
 
-    def preprocess_outputs(self,outputs,threshold,dim):
+    def preprocess_outputs(self,outputs,dim):
         # TODO: This method needs to be completed by you
         li=[]
-        for box in outputs[0][0]:
-            ct = box[2]
-            if ct > threshold:
-                xmin=int(box[3]*dim[0])
-                ymin=int(box[4]*dim[1])
-                xmax=int(box[5]*dim[0])
-                ymax=int(box[6]*dim[1])
-                li.append([xmin,ymin,xmax,ymax])
+        for key in outputs:
+            li.append(outputs[key][0][0])
         return li
