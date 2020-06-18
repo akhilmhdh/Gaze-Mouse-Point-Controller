@@ -80,9 +80,17 @@ class FacialLandmardDetectionModel:
 
     def draw_outputs(self, coords, image):
         # TODO: This method needs to be completed by you
-        for coord in coords:
-            cv2.circle(image, (coord[0],coord[1]), 5, (0, 55, 255), 2)
-        return coords,image
+        left_eye_min = (coords[0]-15,coords[1]-15)
+        left_eye_max = (coords[0]+15,coords[1]+15)
+        right_eye_min = (coords[2]-15,coords[3]-15)
+        right_eye_max = (coords[2]+15,coords[3]+15)
+
+        left_eye = image[left_eye_min[1]:left_eye_max[1],left_eye_min[0]:left_eye_max[0]]
+        right_eye = image[right_eye_min[1]:right_eye_max[1],right_eye_min[0]:right_eye_max[0]]
+
+        eye_coords = [[left_eye_min[0],left_eye_max[0],left_eye_min[1],left_eye_max[1]],
+        [right_eye_min[0],right_eye_max[0],right_eye_min[1],right_eye_max[1]]]
+        return eye_coords,left_eye,right_eye
 
     def preprocess_input(self, image):
         preprocessed_frame = cv2.resize(image,(self.input_shape[3],self.input_shape[2]))
@@ -91,9 +99,8 @@ class FacialLandmardDetectionModel:
 
     def preprocess_outputs(self,outputs,dim):
         # TODO: This method needs to be completed by you
-        li=[]
-        for index in range(0,len(outputs[0]),2):
-                x=int(outputs[0][index]*dim[0])
-                y=int(outputs[0][index+1]*dim[1])
-                li.append([x,y])
-        return li
+        left_eye_x=int(outputs[0][0]*dim[0])
+        left_eye_y=int(outputs[0][1]*dim[1])
+        right_eye_x=int(outputs[0][2]*dim[0])
+        right_eye_y=int(outputs[0][3]*dim[1])
+        return (left_eye_x,left_eye_y,right_eye_x,right_eye_y)
