@@ -9,9 +9,6 @@ class FaceDetectionModel:
     Class for the Face Detection Model.
     '''
     def __init__(self, model_name, device='CPU', extensions=None):
-        '''
-        TODO: Use this to set your instance variables.
-        '''
         self.plugin = None
         self.network = None
         self.exec_network = None
@@ -25,11 +22,6 @@ class FaceDetectionModel:
         self.model_path=model_name
 
     def load_model(self):
-        '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
-        '''
         model_xml = self.model_path
         model_bin = os.path.splitext(self.model_path)[0]+".bin"
         self.plugin = IECore()
@@ -55,7 +47,9 @@ class FaceDetectionModel:
                 if layer in supported_layers:
                     pass
                 else:
-                    raise Exception("Layer extension doesn't support all layers")
+                    msg = "Layer extension doesn't support all layers"
+                    log.error(msg)
+                    raise Exception(msg)
         
         self.exec_network= self.plugin.load_network(self.network, self.device)
 
@@ -67,10 +61,6 @@ class FaceDetectionModel:
         return
 
     def predict(self, image,threshold):
-        '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
-        '''
         input_img = self.preprocess_input(image)
         input_dict = {self.input_name:input_img}
         outputs = self.exec_network.infer(input_dict)[self.output_name]
@@ -79,9 +69,11 @@ class FaceDetectionModel:
 
     def crop_face(self, coords, image):
         # TODO: This method needs to be completed by you
-        coords = coords[0]
-        cropped_face = image[coords[1]:coords[3], coords[0]:coords[2]]
-        return coords,cropped_face
+        if(len(coords)==1):
+            coords = coords[0]
+            cropped_face = image[coords[1]:coords[3], coords[0]:coords[2]]
+            return coords,cropped_face
+        return False,False
 
     def preprocess_input(self, image):
         preprocessed_frame = cv2.resize(image,(self.input_shape[3],self.input_shape[2]))
@@ -89,7 +81,6 @@ class FaceDetectionModel:
         return preprocessed_frame.reshape(1,*preprocessed_frame.shape)
 
     def preprocess_outputs(self,outputs,threshold,dim):
-        # TODO: This method needs to be completed by you
         li=[]
         for box in outputs[0][0]:
             ct = box[2]

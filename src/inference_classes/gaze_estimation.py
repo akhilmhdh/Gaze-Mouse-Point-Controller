@@ -1,17 +1,14 @@
 import os
 import sys
 import logging as log
-from openvino.inference_engine import IENetwork, IECore
+from openvino.inference_engine import IECore
 import cv2
 import math
 class GazeEstimationModel:
     '''
-    Class for the Face Detection Model.
+    Class for the Gaze Est Model.
     '''
     def __init__(self, model_name, device='CPU', extensions=None):
-        '''
-        TODO: Use this to set your instance variables.
-        '''
         self.plugin = None
         self.network = None
         self.exec_network = None
@@ -25,11 +22,6 @@ class GazeEstimationModel:
         self.model_path=model_name
 
     def load_model(self):
-        '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
-        '''
         model_xml = self.model_path
         model_bin = os.path.splitext(self.model_path)[0]+".bin"
         self.plugin = IECore()
@@ -55,7 +47,9 @@ class GazeEstimationModel:
                 if layer in supported_layers:
                     pass
                 else:
-                    raise Exception("Layer extension doesn't support all layers")
+                    msg = "Layer extension doesn't support all layers"
+                    log.error(msg)
+                    raise Exception(msg)
         
         self.exec_network= self.plugin.load_network(self.network, self.device)
 
@@ -66,22 +60,13 @@ class GazeEstimationModel:
 
         return
 
-    def predict(self,left_eye,right_eye,head_pose):
-        '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
-        '''
+    def predict(self,left_eye,right_eye,head_pose,preview=None):
         input_left_eye,input_right_eye = self.preprocess_input(left_eye,right_eye)
         input_dict = {'left_eye_image':input_left_eye,'right_eye_image':input_right_eye,'head_pose_angles':head_pose}
         outputs = self.exec_network.infer(input_dict)[self.output_name]
-        mc,gaze_dir_vector = self.preprocess_outputs(outputs[0],head_pose[0])
-        return mc,gaze_dir_vector
-
-    def draw_outputs(self, coords, image):
-        # TODO: This method needs to be completed by you
-        for coord in coords:
-            cv2.rectangle(image, (coord[0],coord[1]), (coord[2], coord[3]), (0, 55, 255), 1)
-        return coords,image
+        if preview is not None:
+            return self.preprocess_outputs(outputs[0],head_pose[2],preview)
+        return self.preprocess_outputs(outputs[0],head_pose[2])
 
     def preprocess_input(self, left_eye,right_eye):
         preprocessed_left_eye = cv2.resize(left_eye,(self.input_shape[3],self.input_shape[2]))
@@ -92,14 +77,15 @@ class GazeEstimationModel:
 
         return preprocessed_left_eye.reshape(1,*preprocessed_left_eye.shape),preprocessed_right_eye.reshape(1,*preprocessed_right_eye.shape)
 
-    def preprocess_outputs(self,outputs,roll):
-        # TODO: This method needs to be completed by you
-        cos = math.cos(roll*math.pi/180)
-        sin = math.sin(roll*math.pi/180)
+    def preprocess_outputs(self,outputs,roll,preview=None):
+        cos = math.cos(roll*math.pi/180.0)
+        sin = math.sin(roll*math.pi/180.0)
 
         x = outputs[0] * cos + outputs[1] * sin
-        y = outputs[1] * cos - outputs[0] * sin 
+        y = outputs[0] * sin + outputs[1] * cos 
 
+        if preview is not None:
+            cv2.putText(preview, "Gaze Coord: x:{:.2f}|| y:{:.2f} || z:{:.2f}".format(outputs[0],outputs[1],outputs[2]), (10, 40), cv2.FONT_HERSHEY_COMPLEX, 0.25, (0, 255, 0), 1)
+            return (x,y),outputs,preview
         return (x,y),outputs
-
         

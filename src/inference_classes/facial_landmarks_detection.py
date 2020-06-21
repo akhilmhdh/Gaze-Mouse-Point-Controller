@@ -1,17 +1,14 @@
 import os
 import sys
 import logging as log
-from openvino.inference_engine import IENetwork, IECore
+from openvino.inference_engine import IECore
 import cv2
 
 class FacialLandmardDetectionModel:
     '''
-    Class for the Face Detection Model.
+    Class for the Face LandMark detection Model.
     '''
     def __init__(self, model_name, device='CPU', extensions=None):
-        '''
-        TODO: Use this to set your instance variables.
-        '''
         self.plugin = None
         self.network = None
         self.exec_network = None
@@ -25,11 +22,6 @@ class FacialLandmardDetectionModel:
         self.model_path=model_name
 
     def load_model(self):
-        '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
-        '''
         model_xml = self.model_path
         model_bin = os.path.splitext(self.model_path)[0]+".bin"
         self.plugin = IECore()
@@ -55,7 +47,9 @@ class FacialLandmardDetectionModel:
                 if layer in supported_layers:
                     pass
                 else:
-                    raise Exception("Layer extension doesn't support all layers")
+                    msg = "Layer extension doesn't support all layers"
+                    log.error(msg)
+                    raise Exception(msg)
 
         
         self.exec_network= self.plugin.load_network(self.network, self.device)
@@ -67,30 +61,28 @@ class FacialLandmardDetectionModel:
 
         return
 
-    def predict(self, image):
-        '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
-        '''
+    def predict(self, image,preview=False):
         input_img = self.preprocess_input(image)
         input_dict = {self.input_name:input_img}
         outputs = self.exec_network.infer(input_dict)[self.output_name]
         coords = self.preprocess_outputs(outputs,(image.shape[1],image.shape[0]))
-        return self.draw_outputs(coords,image)
+        return self.draw_outputs(coords,image,preview)
 
-    def draw_outputs(self, coords, image):
-        # TODO: This method needs to be completed by you
+    def draw_outputs(self, coords, image, preview):
         left_eye_min = (coords[0]-15,coords[1]-15)
         left_eye_max = (coords[0]+15,coords[1]+15)
         right_eye_min = (coords[2]-15,coords[3]-15)
         right_eye_max = (coords[2]+15,coords[3]+15)
-
         left_eye = image[left_eye_min[1]:left_eye_max[1],left_eye_min[0]:left_eye_max[0]]
         right_eye = image[right_eye_min[1]:right_eye_max[1],right_eye_min[0]:right_eye_max[0]]
 
-        eye_coords = [[left_eye_min[0],left_eye_max[0],left_eye_min[1],left_eye_max[1]],
-        [right_eye_min[0],right_eye_max[0],right_eye_min[1],right_eye_max[1]]]
-        return eye_coords,left_eye,right_eye
+        if preview:
+            cv2.rectangle(image,left_eye_min,left_eye_max,(200, 10, 10),2)
+            cv2.rectangle(image,right_eye_min,right_eye_max,(200, 10, 10),2)
+        
+        eye_coords = [[left_eye_min[0],left_eye_min[1],left_eye_max[1],left_eye_max[1]],
+        [right_eye_min[0],right_eye_min[1],right_eye_max[0],right_eye_max[1]]]
+        return eye_coords,left_eye,right_eye,image
 
     def preprocess_input(self, image):
         preprocessed_frame = cv2.resize(image,(self.input_shape[3],self.input_shape[2]))
@@ -98,9 +90,9 @@ class FacialLandmardDetectionModel:
         return preprocessed_frame.reshape(1,*preprocessed_frame.shape)
 
     def preprocess_outputs(self,outputs,dim):
-        # TODO: This method needs to be completed by you
         left_eye_x=int(outputs[0][0]*dim[0])
         left_eye_y=int(outputs[0][1]*dim[1])
         right_eye_x=int(outputs[0][2]*dim[0])
         right_eye_y=int(outputs[0][3]*dim[1])
+
         return (left_eye_x,left_eye_y,right_eye_x,right_eye_y)

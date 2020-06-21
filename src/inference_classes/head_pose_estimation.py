@@ -1,17 +1,14 @@
 import os
 import sys
-import logging as log
-from openvino.inference_engine import IENetwork, IECore
+import  logging as log
+from openvino.inference_engine import IECore
 import cv2
 
 class HeadPoseEstimationModel:
     '''
-    Class for the Face Detection Model.
+    Class for the Head Pose Est Model.
     '''
     def __init__(self, model_name, device='CPU', extensions=None):
-        '''
-        TODO: Use this to set your instance variables.
-        '''
         self.plugin = None
         self.network = None
         self.exec_network = None
@@ -25,11 +22,6 @@ class HeadPoseEstimationModel:
         self.model_path=model_name
 
     def load_model(self):
-        '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
-        '''
         model_xml = self.model_path
         model_bin = os.path.splitext(self.model_path)[0]+".bin"
         self.plugin = IECore()
@@ -55,7 +47,9 @@ class HeadPoseEstimationModel:
                 if layer in supported_layers:
                     pass
                 else:
-                    raise Exception("Layer extension doesn't support all layers")
+                    msg = "Layer extension doesn't support all layers"
+                    log.error(msg)
+                    raise Exception(msg)
         
         self.exec_network= self.plugin.load_network(self.network, self.device)
 
@@ -66,15 +60,14 @@ class HeadPoseEstimationModel:
 
         return
 
-    def predict(self, image):
-        '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
-        '''
+    def predict(self, image, preview = None):
         input_img = self.preprocess_input(image)
         input_dict = {self.input_name:input_img}
         outputs = self.exec_network.infer(input_dict)
         angles = self.preprocess_outputs(outputs,(image.shape[1],image.shape[0]))
+        if preview is not None:
+            cv2.putText(preview, "Pose Angles: yaw:{:.2f}|| pitch:{:.2f} || roll:{:.2f}".format(angles[0],angles[1],angles[2]), (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.25, (0, 255, 0), 1)
+            return angles,preview
         return angles
 
     def preprocess_input(self, image):
@@ -83,7 +76,6 @@ class HeadPoseEstimationModel:
         return preprocessed_frame.reshape(1,*preprocessed_frame.shape)
 
     def preprocess_outputs(self,outputs,dim):
-        # TODO: This method needs to be completed by you
         li=[]
         for key in outputs:
             li.append(outputs[key][0][0])
