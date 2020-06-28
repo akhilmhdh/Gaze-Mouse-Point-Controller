@@ -139,6 +139,10 @@ CPU: i5 - 4210U@1.70GHz 2.40 GHz
 | head-pose-estimation-adas-0001  | FP32      | 7.31Mb |               |       |
 | gaze-estimation-adas-0002       | FP32      | 7.2Mb  |               |       |
 
+## Output
+
+![Output Result](./bin/output.PNG)
+
 ## Results
 
 From the benchmark, we could see that INT8 has a better FPS compared to others but its accuracy and performance were very poor. FPS32 was having a very large margin in model size compared to others. From the benchmark, I chose FP16 generally with Face Detector having FP32. But my processor is really old compared to openvino's prerequisite. A better latest hardware could have improved model loading and FPS by a large margin.
